@@ -1,19 +1,19 @@
-import { LinkExtractor } from './extractor';
-import * as _ from 'lodash';
+import { LinkExtractor } from "./extractor";
+import { urlsOfAdsPlatforms } from "./types";
 
 const main = async () => {
-    const baseUrl = 'https://ads-developers.yahoo.co.jp/en/ads-api/announcement';
-
-    const extractor = new LinkExtractor(baseUrl);
+  for (const [platform, url] of Object.entries(urlsOfAdsPlatforms)) {
+    const extractor = new LinkExtractor(url, `${platform}.txt`);
     try {
-        const links = _.uniq(await extractor.run());
-        console.log('Extracted links:', links);
-        links.forEach(async link => {
-            await extractor.savePageContent(link)
-        })
+      const links = await extractor.run();
+      console.log("Extracted links:", links);
+      for (const link of links) {
+        await extractor.savePageContent(link);
+      }
     } catch (error) {
-        console.error('Error extracting links:', error);
-    };
-}
+      console.error("Error extracting links:", error);
+    }
+  }
+};
 
 main();

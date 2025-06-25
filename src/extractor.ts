@@ -1,70 +1,59 @@
-import { appendFileSync, unlinkSync } from "fs";
-import { convert } from "html-to-text";
-
-const levelSelectors: Record<number, string> = {
-  1: "#wrapper > article > section",
-  2: "#wrapper > article > div > section",
-}
+import { appendFileSync, unlinkSync, existsSync } from "fs";
+import * as cheerio from "cheerio";
 
 export class LinkExtractor {
-  private baseUrl: string = "";
-  private fileName = "html.json";
+  private baseUrl: URL = new URL("https://example.com");
+  private fileName = "";
 
-  constructor(baseUrl: string) {
+  constructor(baseUrl: URL, filename: string) {
     if (baseUrl) {
       this.baseUrl = baseUrl;
     }
+    if (filename) {
+      this.fileName = filename;
+    }
 
-    unlinkSync(this.fileName);
+    if (existsSync(this.fileName)) {
+      unlinkSync(this.fileName);
+    }
   }
 
   async run() {
     return this.extractAllLinks(this.baseUrl);
   }
 
-  async extractAllLinks(url: string): Promise<string[]> {
-    const links = await this.extractLinks(url, 1);
+  async extractAllLinks(url: URL): Promise<string[]> {
+    const links = await this.extractLinks(url);
 
-    return links
+    return links;
   }
 
-  async extractLinks(url: string, level: number): Promise<string[]> {
-    const pageContent = await this.fetchPage(url, level);
-    return this.parseLinks(pageContent);
-  }
-
-  async fetchPage(url: string, level: number): Promise<string> {
-    try {
-      const response = await fetch(url);
-      const responseText = await response.text();
-      const content = convert(responseText, {
-        baseElements: {
-            selectors: [levelSelectors[level]]
+  async extractLinks(url: URL): Promise<string[]> {
+    const $ = await cheerio.fromURL(url);
+    const listItems = $("section").find("a").toArray().slice(0, 10);
+    const links = listItems
+      .map((item) => {
+        const href = $(item).attr("href") ?? "";
+        if (href.startsWith("https://")) {
+          return href;
+        } else if (href.startsWith("/")) {
+          return new URL(href, url).href;
         }
-      });
-      return content;
-    } catch (error) {
-      console.error(`Error fetching page ${url}:`, error);
-      return "";
-    }
+        return "";
+      })
+      .filter((link) => link !== "");
+
+    return links;
   }
 
   async savePageContent(url: string): Promise<void> {
-    const response = await fetch(url);
-    const responseText = await response.text();
-    const content = convert(responseText, {
-        baseElements: {
-            selectors: [levelSelectors[2]]
-        }
-    });
-    appendFileSync(this.fileName, `URL: ${url}\nContent:\n${content}\n\n`, "utf8");
-  }
-
-  private parseLinks(html: string): string[] {
-    const httpRegex = /https:\/\/[^\s"'\]]+/g;
-    const httpLinks = html.match(httpRegex) || [];
-    const uniqueLinks = Array.from(new Set(httpLinks)).filter(link => !link.includes('/index'));
-    return uniqueLinks;
+    const $ = await cheerio.fromURL(url);
+    const section = $("section").first();
+    const content = section.text();
+    appendFileSync(
+      this.fileName,
+      `URL: ${url}\nContent:\n${content}\n\n`,
+      "utf8"
+    );
   }
 }
-
