@@ -19,4 +19,12 @@ const main = async () => {
   }
 };
 
-main();
+main()
+  .then(() => {
+    console.log('Processing completed');
+    process.exit(0);
+  })
+  .catch(err => {
+    console.error('Fatal error:', err);
+    process.exit(1);
+  });

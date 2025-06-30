@@ -1,10 +1,10 @@
 import puppeteer from 'puppeteer';
 
-const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36';
+const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36';
 
 export async function getFullPageContent(pageUrl: URL): Promise<string> {
   const fetchHTML = await requestByFetching(pageUrl.href);
-  if(fetchHTML.includes('<div')) {
+  if(fetchHTML && fetchHTML.includes('<div')) {
     return fetchHTML
   }
   return await requestByLaunchingBrowser(pageUrl.href);
@@ -44,9 +44,5 @@ const requestByFetching = async (pageUrl: string) => {
     },
   });
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch page: ${response.statusText}`);
-  }
-
-  return await response.text();
+  return response.ok ? await response.text() : Promise.resolve(undefined);
 }

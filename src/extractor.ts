@@ -2,6 +2,7 @@ import * as cheerio from "cheerio";
 import { appendFileSync, existsSync, unlinkSync } from "fs";
 import TurndownService from "turndown";
 import { getFullPageContent } from "./fetch-page";
+import _ from "lodash";
 
 const loadPageContent = async (url: URL): Promise<cheerio.CheerioAPI> =>  
   cheerio.load(await getFullPageContent(url));
@@ -35,31 +36,34 @@ export class LinkExtractor {
 
   async extractLinks(url: URL): Promise<URL[]> {
     const $ = await loadPageContent(url);
-    const main = [$("main"), $("section")].find(el => el.length);
+    const main = [$("main"), $("section"), $("[data-click-area='Main']")].find(el => el.length);
     if (!main) {
       console.warn(`No main or section found in ${url}`);
       return [];
     }
-    const list = main.first().find("a").toArray().slice(0, 10);
-    const links = list
-      .map((item) => {
-        const href = $(item).attr("href") ?? "";
+    const list = main.first().find("a").toArray();
+    const links = list.map((el) => {
+      const href = $(el).attr("href");
+      if (href) {
         if (href.startsWith("https://")) {
           return href;
         } else if (href.startsWith("/")) {
           return new URL(href, url).href;
         }
-        return "";
-      })
-      .filter((link) => link !== "");
+      }
+      return "";
+    }).filter(link => link !== "");
 
-    return links.map((link) => new URL(link));
+
+    const candidateLinks = _.uniq(links).slice(0, 10).sort((link1, link2) => link2.localeCompare(link1)).map((link) => new URL(link));
+
+    return candidateLinks;
   }
 
   async savePageContent(url: URL): Promise<void> {
 
     const $ = await loadPageContent(url);
-    const section = [$("article section"), $("article"), $("section"), $("[class*='article']")].find(el => el.length)
+    const section = [$("article section"), $("article"), $("section"), $("[class*='article']"), $("[data-click-area='Main']")].find(el => el.length)
     
     if (!section) {
       console.warn(`No article or section found in ${url}`);
@@ -68,7 +72,7 @@ export class LinkExtractor {
 
     const turndownService = new TurndownService();
     const content = turndownService.turndown(section.first().html() ?? "");
-    
+
     appendFileSync(
       this.fileName,
       `URL: ${url}\nContent:\n${content}\n\n`,
