@@ -2,6 +2,8 @@ export enum AdsPlatform {
   GoogleAds = "Google Ads",
   DV360 = "Display & Video 360",
   YahooAds = "Yahoo Ads",
+  ASA = "Apple Search Ads",
+  LineAds = "LINE Ads",
 }
 
 export const urlsOfAdsPlatforms: Partial<Record<AdsPlatform, URL>> = {
@@ -13,5 +15,11 @@ export const urlsOfAdsPlatforms: Partial<Record<AdsPlatform, URL>> = {
   ),
   [AdsPlatform.YahooAds]: new URL(
     "https://ads-developers.yahoo.co.jp/en/ads-api/announcement/"
-  )
+  ),
+  [AdsPlatform.ASA]: new URL(
+    "https://developer.apple.com/news/"
+  ),
+  [AdsPlatform.LineAds]: new URL(
+    "https://developers.line.biz/en/news/1/"
+  ),
 };
